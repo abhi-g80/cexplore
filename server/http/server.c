@@ -24,7 +24,7 @@ char resp[] =
 
 int main(int argc, char *argv[]) {
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);
-    
+
     // Socket creation
 
     // Use IPv4 (AF_INET) domain with sequenced, reliable 2-way
