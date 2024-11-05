@@ -5,22 +5,19 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "logger.h"
+#include "../include/logger.h"
 
 #define DEFAULT_PORT 9090
 #define MAX_BUFFER 2048
 #define APP_NAME "Webby"
 #define APP_VERSION "0.1.0"
 
-#define log_info(...) logger_f(INFO, __FILE__, __LINE__, __VA_ARGS__)
-#define log_debug(...) logger_f(DEBUG, __FILE__, __LINE__, __VA_ARGS__)
-#define log_error(...) logger_f(ERROR, __FILE__, __LINE__, __VA_ARGS__)
-
 char resp[] =
     "HTTP/1.1 200 OK\r\n"
     "Server: Webby\r\n"
+    "x-hosted-by: Bigblind\r\n"
     "Content-type: text/html\r\n\r\n"
-    "<html><b>It may be working!</b></html>\r\n";
+    "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
 
 int main(int argc, char *argv[]) {
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);
@@ -39,7 +36,6 @@ int main(int argc, char *argv[]) {
     log_info("Successfully created socket: sockfd: %d", sockfd);
 
     // Binding socket to an addr
-
     struct sockaddr_in host_addr;
     int host_addrlen = sizeof(host_addr);
 
