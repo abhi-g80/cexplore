@@ -3,21 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+
+#include "../include/utils.h"
 
 #define MAX_BUFFER 2048
 
 static const char *LEVEL_STRING[] = {FOREACH_LEVEL(GENERATE_STRING)};
-
-const char *get_time() {
-    char *buf = malloc(sizeof(char) * 256);
-    time_t rawtime = time(NULL);
-
-    struct tm *ptm = localtime(&rawtime);
-
-    strftime(buf, 256, "%Y/%m/%d %H:%M:%S", ptm);
-    return buf;
-}
 
 void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fmt, ...) {
     const char *timenow = get_time();
@@ -44,6 +35,7 @@ void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fm
     char fmt_s[MAX_BUFFER];
     if (level == ERROR) {
         sprintf(fmt_s, "%s [%s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
+        perror(NULL);
     } else {
         sprintf(fmt_s, "%s [%s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
     }

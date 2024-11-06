@@ -1,7 +1,6 @@
-#include <stdarg.h>
-
 #ifndef LOGGER_H
 #define LOGGER_H
+#include <stdarg.h>
 
 #define FOREACH_LEVEL(LEVEL) \
     LEVEL(INFO)              \
