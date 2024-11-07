@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <error.h>
+#include <getopt.h>
 #include <netinet/ip.h>  // contains socket.h via in.h
 #include <stdio.h>
 #include <stdlib.h>  // for exit
@@ -15,6 +16,8 @@
  */
 const char *http_status_ok = "HTTP/1.1 200 OK";
 const char *http_status_not_found = "HTTP/1.1 404 NOT FOUND";
+
+int DEBUG_F = 0;
 
 /**
  * Example response html
@@ -51,15 +54,57 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
 // Function to display the help message
 void usage() {
     printf("Usage: %s [options]\n\n", APP_NAME);
+    printf("A small webserver\n\n");
     printf("Options:\n");
-    printf("  -h, --help\t\tDisplay this help message\n");
-    printf("  -d, --debug\t\tEnable debug mode\n");
-    printf("  -v, --version\tPrint version number and exit\n");
-    printf("  -p, --port <port>\tSet the port number (default: 9090)\n");
+    printf("  -h, --help\t\tdisplay this help message\n");
+    printf("  -v, --version\t\tprint version number and exit\n");
+    printf("  -p, --port <port>\tset the port number (default: 9090)\n");
 }
 
+// Print version
+void version() { printf("%s v%s\n", APP_NAME, APP_VERSION); }
+
 int main(int argc, char *argv[]) {
+    int c;
+    uint16_t port = DEFAULT_PORT;
+
+    // clang-format off
+    static struct option long_options[] = {
+        {"help",    no_argument,       0, 'h'},
+        {"version", no_argument,       0, 'v'},
+        {"port",    required_argument, 0, 'p'},
+        {0,         0,                 0,  0 }
+    };
+    // clang-format on
+
+    while (1) {
+        int option_index = 0;
+
+        c = getopt_long(argc, argv, "hvp:0", long_options, &option_index);
+
+        if (c == -1) break;
+
+        switch (c) {
+            case 'h':
+                usage();
+                exit(EXIT_SUCCESS);
+            case 'v':
+                version();
+                exit(EXIT_SUCCESS);
+            case 'p':
+                port = strtol(optarg, NULL, 10);
+                break;
+            case '?':
+                usage();
+                exit(EXIT_FAILURE);
+            default:
+                printf("?? getopt returned char code: 0%o ??\n", c);
+        }
+    }
+
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);
+
+    if (port == DEFAULT_PORT) log_info("Using default port: %d", port);
 
     // Socket creation
 
@@ -71,21 +116,21 @@ int main(int argc, char *argv[]) {
         log_error("Error creating socket");
         exit(EXIT_FAILURE);
     }
-    log_info("Successfully created socket: sockfd: %d", sockfd);
+    log_debug("Successfully created socket: sockfd: %d", sockfd);
 
     // Binding socket to an addr
     struct sockaddr_in host_addr;
     int host_addrlen = sizeof(host_addr);
 
     host_addr.sin_family = AF_INET;
-    host_addr.sin_port = htons(DEFAULT_PORT);
+    host_addr.sin_port = htons(port);
     host_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // INADDR_ANY refers 0.0.0.0
                                                     // for accepting any incoming message
     if (bind(sockfd, (struct sockaddr *)&host_addr, host_addrlen) != 0) {
         log_error("Error binding socket");
         exit(EXIT_FAILURE);
     }
-    log_info("Successfully bound socket to addr: %d", INADDR_ANY);
+    log_debug("Successfully bound socket to addr: %d", INADDR_ANY);
 
     // Listen to socket in passive mode
     if (listen(sockfd, SOMAXCONN) != 0) {
@@ -93,7 +138,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    log_info("Server now listening on socket for incoming connections");
+    log_info("Server now listening for incoming connections on port: %d", port);
 
     char read_buffer[MAX_BUFFER];
 
@@ -122,7 +167,7 @@ int main(int argc, char *argv[]) {
             log_error("Error reading from sock");
             continue;
         }
-        log_info("Read bytes: %ld", r);
+        log_debug("Read bytes: %ld", r);
 
         char method[MAX_BUFFER], uri[MAX_BUFFER], proto[MAX_BUFFER];
 
