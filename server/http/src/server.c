@@ -52,11 +52,12 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
 }
 
 // Function to display the help message
-void usage() {
-    printf("Usage: %s [options]\n\n", APP_NAME);
-    printf("A small webserver\n\n");
+void usage(char *bin) {
+    printf("Usage: %s [options]\n\n", bin);
+    printf("Webby - A small webserver\n\n");
     printf("Options:\n");
     printf("  -h, --help\t\tdisplay this help message\n");
+    printf("  -d, --debug\t\tprint debug logs\n");
     printf("  -v, --version\t\tprint version number and exit\n");
     printf("  -p, --port <port>\tset the port number (default: 9090)\n");
 }
@@ -71,6 +72,7 @@ int main(int argc, char *argv[]) {
     // clang-format off
     static struct option long_options[] = {
         {"help",    no_argument,       0, 'h'},
+        {"debug",   no_argument,       0, 'd'},
         {"version", no_argument,       0, 'v'},
         {"port",    required_argument, 0, 'p'},
         {0,         0,                 0,  0 }
@@ -80,22 +82,25 @@ int main(int argc, char *argv[]) {
     while (1) {
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "hvp:0", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvdp:0", long_options, &option_index);
 
         if (c == -1) break;
 
         switch (c) {
             case 'h':
-                usage();
+                usage(argv[0]);
                 exit(EXIT_SUCCESS);
             case 'v':
                 version();
                 exit(EXIT_SUCCESS);
+            case 'd':
+                DEBUG_F = 1;
+                break;
             case 'p':
                 port = strtol(optarg, NULL, 10);
                 break;
             case '?':
-                usage();
+                usage(argv[0]);
                 exit(EXIT_FAILURE);
             default:
                 printf("?? getopt returned char code: 0%o ??\n", c);
