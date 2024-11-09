@@ -6,6 +6,7 @@
 #include <stdlib.h>  // for exit
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../include/defaults.h"
 #include "../include/logger.h"
@@ -26,11 +27,7 @@ char *example_html_response =
     "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
 
 /**
- * Send an HTTP response
- *
- * header:       "HTTP/1.1 404 NOT FOUND" or "HTTP/1.1 200 OK", etc.
- * content_type: "text/plain", etc.
- * body:         the data to send.
+ * Send an HTTP response.
  *
  * Return the value from the send() function.
  */
@@ -50,6 +47,36 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
     memcpy(response + response_length, body, content_length);
     free(server_date);
     return send(fd, response, response_length + content_length, 0);
+}
+
+/**
+ * Simple signal handler.
+ * Log an message and exit with EXIT_SUCCESS.
+ */
+void termination_handler(int signum) {
+    log_info("Shutting down the server");
+    exit(EXIT_SUCCESS);
+}
+
+/**
+ * Signal handler which should handle both SIGINT and SIGTERM.
+ */
+void setup_signal_handler() {
+    struct sigaction new_action, old_action;
+
+    new_action.sa_handler = termination_handler;
+    sigemptyset(&new_action.sa_mask);
+
+    new_action.sa_flags = 0;
+
+    sigaction(SIGINT, NULL, &old_action);
+    sigaction(SIGTERM, NULL, &old_action);
+
+    if (old_action.sa_handler != SIG_IGN)
+    {
+        sigaction(SIGINT,&new_action,NULL);
+        sigaction(SIGTERM,&new_action,NULL);
+    }
 }
 
 int handle_client(int connfd) {
@@ -131,6 +158,8 @@ int main(int argc, char *argv[]) {
                 printf("?? getopt returned char code: 0%o ??\n", c);
         }
     }
+
+    setup_signal_handler();
 
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);
 
