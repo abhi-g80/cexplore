@@ -1,10 +1,10 @@
-#include "../include/logger.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/utils.h"
+#include "utils.h"
 
 #define MAX_BUFFER 2048
 

@@ -2,15 +2,15 @@
 #include <error.h>
 #include <getopt.h>
 #include <netinet/ip.h>  // contains socket.h via in.h
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>  // for exit
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
 
-#include "../include/defaults.h"
-#include "../include/logger.h"
-#include "../include/utils.h"
+#include "defaults.h"
+#include "logger.h"
+#include "utils.h"
 
 /**
  * HTTP responses
@@ -72,10 +72,9 @@ void setup_signal_handler() {
     sigaction(SIGINT, NULL, &old_action);
     sigaction(SIGTERM, NULL, &old_action);
 
-    if (old_action.sa_handler != SIG_IGN)
-    {
-        sigaction(SIGINT,&new_action,NULL);
-        sigaction(SIGTERM,&new_action,NULL);
+    if (old_action.sa_handler != SIG_IGN) {
+        sigaction(SIGINT, &new_action, NULL);
+        sigaction(SIGTERM, &new_action, NULL);
     }
 }
 
