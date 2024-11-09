@@ -37,7 +37,7 @@ char *example_html_response =
 int send_response(int fd, const char *header, char *content_type, void *body, int content_length) {
     char response[MAX_RESPONSE_SIZE];
 
-    const char *server_date = get_server_date();
+    char *server_date = get_server_date();
 
     int response_length = sprintf(response,
                                   "%s\r\n"
@@ -48,7 +48,32 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
                                   "\r\n",
                                   header, server_date, APP_NAME, content_length, content_type);
     memcpy(response + response_length, body, content_length);
+    free(server_date);
     return send(fd, response, response_length + content_length, 0);
+}
+
+int handle_client(int connfd) {
+    char read_buffer[MAX_BUFFER] = {0};
+    ssize_t r = read(connfd, read_buffer, MAX_BUFFER);
+    if (r < 0) {
+        log_error("Error reading from sock");
+        return 1;
+    }
+    log_debug("Read bytes: %ld", r);
+
+    char method[MAX_BUFFER], uri[MAX_BUFFER], proto[MAX_BUFFER];
+
+    sscanf(read_buffer, "%s %s %s", method, uri, proto);
+
+    log_info("Request: method: %s uri: %s proto: %s", method, uri, proto);
+
+    int w = send_response(connfd, http_status_ok, "text/html", example_html_response,
+                          strlen(example_html_response));
+    if (w < 0) {
+        log_error("Error sending response");
+        return 1;
+    }
+    return 0;
 }
 
 // Function to display the help message
@@ -145,8 +170,6 @@ int main(int argc, char *argv[]) {
 
     log_info("Server now listening for incoming connections on port: %d", port);
 
-    char read_buffer[MAX_BUFFER];
-
     struct sockaddr_in client_addr;
     ssize_t client_addr_len = sizeof(client_addr);
 
@@ -163,27 +186,12 @@ int main(int argc, char *argv[]) {
             getsockname(connfd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
         if (sockname < 0) {
             log_error("Error reading client addr");
-            continue;
+            return 1;
         }
         log_info("Accepted new incoming connection from: %s", inet_ntoa(client_addr.sin_addr));
 
-        ssize_t r = read(connfd, read_buffer, MAX_BUFFER);
-        if (r < 0) {
-            log_error("Error reading from sock");
-            continue;
-        }
-        log_debug("Read bytes: %ld", r);
-
-        char method[MAX_BUFFER], uri[MAX_BUFFER], proto[MAX_BUFFER];
-
-        sscanf(read_buffer, "%s %s %s", method, uri, proto);
-        log_info("Request: method: %s uri: %s proto: %s", method, uri, proto);
-
-        int w = send_response(connfd, http_status_ok, "text/html", example_html_response,
-                              strlen(example_html_response));
-        if (w < 0) {
-            log_error("Error sending response");
-            continue;
+        if (handle_client(connfd) != 0) {
+            log_error("Error handling client");
         }
 
         // Close connfd

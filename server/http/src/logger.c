@@ -13,7 +13,7 @@ static const char *LEVEL_STRING[] = {FOREACH_LEVEL(GENERATE_STRING)};
 extern int DEBUG_F;
 
 void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fmt, ...) {
-    const char *timenow = get_time();
+    char *timenow = get_time();
 
     va_list args1;
     va_list args2;
@@ -37,6 +37,7 @@ void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fm
     char fmt_s[MAX_BUFFER];
 
     sprintf(fmt_s, "%s [%s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
+    free(timenow);
     if (level == DEBUG && DEBUG_F != 1) {
         return;
     }

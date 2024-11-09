@@ -8,7 +8,7 @@
  *
  * format example: 2024/04/22 23:59:59
  */
-const char *get_time() {
+char *get_time() {
     char *buf = malloc(sizeof(char) * 256);
     time_t rawtime = time(NULL);
 
@@ -23,7 +23,7 @@ const char *get_time() {
  *
  * format example: Wed, 06 Nov 2024 21:12:07 GMT
  */
-const char *get_server_date() {
+char *get_server_date() {
     char *buf = malloc(sizeof(char) * 256);
     time_t rawtime = time(NULL);
 
