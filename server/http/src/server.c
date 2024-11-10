@@ -1,11 +1,13 @@
 #include <arpa/inet.h>
 #include <error.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <netinet/ip.h>  // contains socket.h via in.h
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>  // for exit
 #include <string.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 
 #include "defaults.h"
@@ -49,6 +51,13 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
     return send(fd, response, response_length + content_length, 0);
 }
 
+void setnonblocking(int fd) {
+    int old_option = fcntl(fd, F_GETFL);
+    int new_option = old_option | O_NONBLOCK;
+
+    fcntl(fd, F_SETFL, new_option);
+}
+
 /**
  * Simple signal handler.
  * Log an message and exit with EXIT_SUCCESS.
@@ -76,6 +85,54 @@ void setup_signal_handler() {
         sigaction(SIGINT, &new_action, NULL);
         sigaction(SIGTERM, &new_action, NULL);
     }
+}
+
+/**
+ * Create a socket, bind it on INADDR_ANY with the given port and
+ * start listening. Return the created socket fd.
+ */
+int setup_socket(int port) {
+    // Socket creation
+
+    // Use IPv4 (AF_INET) domain with sequenced, reliable 2-way
+    // type (SOCK_STREAM) and default protocol 0 (IPPROTO_TCP)
+    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    if (sockfd == -1) {
+        log_error("Error creating socket");
+        exit(EXIT_FAILURE);
+    }
+    log_debug("Successfully created socket: sockfd: %d", sockfd);
+
+    int opt = 1;  // For setting sock options
+
+    // Get rid of the "Address already in use" error when binding socket
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+        log_error("Could not set socket options");
+        exit(EXIT_FAILURE);
+    }
+
+    // Binding socket to an addr
+    struct sockaddr_in host_addr;
+    int host_addrlen = sizeof(host_addr);
+
+    host_addr.sin_family = AF_INET;
+    host_addr.sin_port = htons(port);
+    host_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // INADDR_ANY refers 0.0.0.0
+                                                    // for accepting any incoming message
+    if (bind(sockfd, (struct sockaddr *)&host_addr, host_addrlen) != 0) {
+        log_error("Error binding socket");
+        exit(EXIT_FAILURE);
+    }
+    log_debug("Successfully bound socket to addr: %d", INADDR_ANY);
+
+    // Listen to socket in passive mode
+    if (listen(sockfd, SOMAXCONN) != 0) {
+        log_error("Error setting listen mode");
+        exit(EXIT_FAILURE);
+    }
+
+    return sockfd;
 }
 
 int handle_client(int connfd) {
@@ -164,80 +221,75 @@ int main(int argc, char *argv[]) {
 
     if (port == DEFAULT_PORT) log_info("Using default port: %d", port);
 
-    // Socket creation
+    int sockfd = setup_socket(port);
 
-    // Use IPv4 (AF_INET) domain with sequenced, reliable 2-way
-    // type (SOCK_STREAM) and default protocol 0 (IPPROTO_TCP)
-    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-    if (sockfd == -1) {
-        log_error("Error creating socket");
+    struct epoll_event ev, events[MAX_EVENTS];
+    int nfds;
+    int epollfd = epoll_create1(0);
+    if (epollfd == -1) {
+        log_error("Could not create epoll fd");
         exit(EXIT_FAILURE);
     }
-    log_debug("Successfully created socket: sockfd: %d", sockfd);
-
-    int opt = 1;  // For setting sock options
-
-    // Get rid of the "Address already in use" error when binding socket
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-        log_error("Could not set socket options");
-        exit(EXIT_FAILURE);
-    }
-
-    // Binding socket to an addr
-    struct sockaddr_in host_addr;
-    int host_addrlen = sizeof(host_addr);
-
-    host_addr.sin_family = AF_INET;
-    host_addr.sin_port = htons(port);
-    host_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // INADDR_ANY refers 0.0.0.0
-                                                    // for accepting any incoming message
-    if (bind(sockfd, (struct sockaddr *)&host_addr, host_addrlen) != 0) {
-        log_error("Error binding socket");
-        exit(EXIT_FAILURE);
-    }
-    log_debug("Successfully bound socket to addr: %d", INADDR_ANY);
-
-    // Listen to socket in passive mode
-    if (listen(sockfd, SOMAXCONN) != 0) {
-        log_error("Error setting listen mode");
+    ev.events = EPOLLIN;
+    ev.data.fd = sockfd;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
+        log_error("epoll_ctl: listen sock: sockfd");
         exit(EXIT_FAILURE);
     }
 
     log_info("Server now listening for incoming connections on port: %d", port);
 
-    struct sockaddr_in client_addr;
-    ssize_t client_addr_len = sizeof(client_addr);
+    struct sockaddr_in client_addr, host_addr;
+    ssize_t client_addrlen = sizeof(client_addr);
+    ssize_t host_addrlen = sizeof(host_addr);
 
-    while (1) {
-        // Accept incoming connection
-        int connfd = accept(sockfd, (struct sockaddr *)&host_addr, (socklen_t *)&host_addrlen);
-
-        if (connfd == -1) {
-            log_error("Error accepting incoming connection");
-            continue;
+    for (;;) {
+        nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+        if (nfds == -1) {
+            log_error("epoll_wait: nfds:");
+            exit(EXIT_FAILURE);
         }
+        for (int n = 0; n < nfds; n++) {
+            if (events[n].data.fd == sockfd) {
+                int connfd =
+                    accept(sockfd, (struct sockaddr *)&host_addr, (socklen_t *)&host_addrlen);
+                if (connfd == -1) {
+                    log_error("Error accepting incoming connection");
+                    continue;
+                }
+                setnonblocking(connfd);
+                ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+                ev.data.fd = connfd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
+                    log_error("epoll_ctl: connfd");
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                int connfd = events[n].data.fd;
+                int sockname = getsockname(connfd, (struct sockaddr *)&client_addr,
+                                           (socklen_t *)&client_addrlen);
+                if (sockname < 0) {
+                    log_error("Error reading client addr");
+                    return 1;
+                }
+                log_debug("Accepted new incoming connection from: %s",
+                          inet_ntoa(client_addr.sin_addr));
 
-        int sockname =
-            getsockname(connfd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
-        if (sockname < 0) {
-            log_error("Error reading client addr");
-            return 1;
-        }
-        log_debug("Accepted new incoming connection from: %s", inet_ntoa(client_addr.sin_addr));
+                if (handle_client(connfd) != 0) {
+                    log_error("Error handling client");
+                }
 
-        if (handle_client(connfd) != 0) {
-            log_error("Error handling client");
-        }
-
-        // Close connfd
-        if (close(connfd) != 0) {
-            log_error("Error closing connection");
-            if (fsync(connfd) != 0) {
-                log_error("Error in flushing data");
+                // Close connfd
+                if (close(connfd) != 0) {
+                    log_error("Error closing connection");
+                    if (fsync(connfd) != 0) {
+                        log_error("Error in flushing data");
+                    }
+                    continue;
+                }
             }
-            continue;
         }
     }
+
     exit(EXIT_SUCCESS);
 }
