@@ -5,7 +5,7 @@ CC = cc
 SRC_DIR = src
 INCLUDE_DIR = include/
 BIN_DIR = bin
-PROGRAM_NAME = server
+PROGRAM_NAME = webby
 
 # Recursively find all source and header files
 SRC_FILES = $(shell find $(SRC_DIR) -type f -name '*.c')
@@ -15,7 +15,7 @@ HEADER_FILES = $(shell find $(INCLUDE_DIR) -type f -name '*.h')
 BINARY = $(BIN_DIR)/$(PROGRAM_NAME)
 
 # Specify the compiler flags
-CFLAGS = -Wall -I$(INCLUDE_DIR)
+CFLAGS = -Wall -O2 -I$(INCLUDE_DIR)
 
 # Default target
 all: $(BINARY)
