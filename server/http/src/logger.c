@@ -4,14 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "defaults.h"
 #include "utils.h"
-
-#define MAX_BUFFER 2048
 
 static const char *LEVEL_STRING[] = {FOREACH_LEVEL(GENERATE_STRING)};
 
 extern int DEBUG_F;
 
+/**
+ * Log message to stdout for INFO and DEBUG and stderr for ERROR.
+ * Will call perror() when logging ERROR message.
+ */
 void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fmt, ...) {
     char *timenow = get_time();
 
@@ -31,12 +34,10 @@ void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fm
     FILE *stream = stdout;
     if (level == ERROR) {
         stream = stderr;
-    } else if (level == INFO) {
-        level_string = "INFO ";
     }
     char fmt_s[MAX_BUFFER];
 
-    sprintf(fmt_s, "%s [%s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
+    sprintf(fmt_s, "%s [%-5s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
     free(timenow);
     if (level == DEBUG && DEBUG_F != 1) {
         return;

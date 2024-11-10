@@ -3,7 +3,7 @@
 #include <stdarg.h>
 
 #define FOREACH_LEVEL(LEVEL) \
-    LEVEL(INFO)              \
+    LEVEL(INFO )             \
     LEVEL(DEBUG)             \
     LEVEL(ERROR)
 

@@ -91,7 +91,7 @@ int handle_client(int connfd) {
 
     sscanf(read_buffer, "%s %s %s", method, uri, proto);
 
-    log_info("Request: method: %s uri: %s proto: %s", method, uri, proto);
+    log_debug("Request: method: %s uri: %s proto: %s", method, uri, proto);
 
     int w = send_response(connfd, http_status_ok, "text/html", example_html_response,
                           strlen(example_html_response));
@@ -176,6 +176,14 @@ int main(int argc, char *argv[]) {
     }
     log_debug("Successfully created socket: sockfd: %d", sockfd);
 
+    int opt = 1;  // For setting sock options
+
+    // Get rid of the "Address already in use" error when binding socket
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+        log_error("Could not set socket options");
+        exit(EXIT_FAILURE);
+    }
+
     // Binding socket to an addr
     struct sockaddr_in host_addr;
     int host_addrlen = sizeof(host_addr);
@@ -216,7 +224,7 @@ int main(int argc, char *argv[]) {
             log_error("Error reading client addr");
             return 1;
         }
-        log_info("Accepted new incoming connection from: %s", inet_ntoa(client_addr.sin_addr));
+        log_debug("Accepted new incoming connection from: %s", inet_ntoa(client_addr.sin_addr));
 
         if (handle_client(connfd) != 0) {
             log_error("Error handling client");
