@@ -12,6 +12,7 @@
 
 #include "defaults.h"
 #include "logger.h"
+#include "requests.h"
 #include "utils.h"
 
 /**
@@ -51,12 +52,10 @@ int send_response(int fd, const char *header, char *content_type, void *body, in
     return send(fd, response, response_length + content_length, 0);
 }
 
-void setnonblocking(int fd) {
-    int old_option = fcntl(fd, F_GETFL);
-    int new_option = old_option | O_NONBLOCK;
-
-    fcntl(fd, F_SETFL, new_option);
-}
+/*
+ * Set the fd as non-blocking but keep the existing options
+ */
+void setnonblocking(int fd) { fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK); }
 
 /**
  * Simple signal handler.
@@ -135,6 +134,40 @@ int setup_socket(int port) {
     return sockfd;
 }
 
+/**
+ * Naive implementation for reading all headers
+ *
+ * @read_buffer: buffer to read from
+ * @start      : index to start reading from
+ * @stop       : max index to read until
+ */
+void read_all_headers(char *read_buffer, int start, int stop) {
+    char buf[MAX_BUFFER];
+    char k[MAX_BUFFER], v[MAX_BUFFER];
+    int key_found = 0;
+
+    for (int i = start, j = 0; i < stop; i++) {
+        if ((read_buffer[i - 1] == '\r') && (read_buffer[i] == '\n')) {
+            if ((read_buffer[i - 1] == '\n') && (read_buffer[i] == '\r')) {
+                break;
+            }
+            memset(v, '\0', sizeof(char) * MAX_BUFFER);
+            strcpy(v, buf);
+            log_debug("Header: %s value: %s", k, v);
+            memset(buf, '\0', sizeof(char) * MAX_BUFFER);
+            key_found = 0, j = 0;
+            continue;
+        }
+        buf[j++] = read_buffer[i];
+        if ((buf[j - 1] == ':') && !key_found) {
+            memset(k, '\0', sizeof(char) * MAX_BUFFER);
+            strncpy(k, buf, strlen(buf) - 1);
+            key_found = 1, j = 0, i++;
+            memset(buf, '\0', sizeof(char) * MAX_BUFFER);
+        }
+    }
+}
+
 int handle_client(int connfd) {
     char read_buffer[MAX_BUFFER] = {0};
     ssize_t r = read(connfd, read_buffer, MAX_BUFFER);
@@ -144,11 +177,16 @@ int handle_client(int connfd) {
     }
     log_debug("Read bytes: %ld", r);
 
-    char method[MAX_BUFFER], uri[MAX_BUFFER], proto[MAX_BUFFER];
+    struct http_request_info hri;
+    hri.fd = connfd;
+    sscanf(read_buffer, "%s %s %s", hri.method, hri.uri, hri.proto);
 
-    sscanf(read_buffer, "%s %s %s", method, uri, proto);
+    if (DEBUG_F) {
+        int total_len = strlen(hri.method) + strlen(hri.uri) + strlen(hri.proto);
+        read_all_headers(read_buffer, total_len+4, r);
+    }
 
-    log_debug("Request: method: %s uri: %s proto: %s", method, uri, proto);
+    log_debug("Request info: method: %s uri: %s proto: %s", hri.method, hri.uri, hri.proto);
 
     int w = send_response(connfd, http_status_ok, "text/html", example_html_response,
                           strlen(example_html_response));
