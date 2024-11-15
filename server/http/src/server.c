@@ -13,6 +13,7 @@
 #include "defaults.h"
 #include "logger.h"
 #include "requests.h"
+#include "response.h"
 #include "utils.h"
 
 /**
@@ -21,36 +22,13 @@
 const char *http_status_ok = "HTTP/1.1 200 OK";
 const char *http_status_not_found = "HTTP/1.1 404 NOT FOUND";
 
-int DEBUG_F = 0;
-
 /**
  * Example response html
  */
-char *example_html_response =
+char example_html_response[] =
     "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
 
-/**
- * Send an HTTP response.
- *
- * Return the value from the send() function.
- */
-int send_response(int fd, const char *header, char *content_type, void *body, int content_length) {
-    char response[MAX_RESPONSE_SIZE];
-
-    char *server_date = get_server_date();
-
-    int response_length = sprintf(response,
-                                  "%s\r\n"
-                                  "Date: %s\r\n"
-                                  "Server: %s\r\n"
-                                  "Content-Length: %d\r\n"
-                                  "Content-Type: %s\r\n"
-                                  "\r\n",
-                                  header, server_date, APP_NAME, content_length, content_type);
-    memcpy(response + response_length, body, content_length);
-    free(server_date);
-    return send(fd, response, response_length + content_length, 0);
-}
+int DEBUG_F = 0;
 
 /*
  * Set the fd as non-blocking but keep the existing options
@@ -148,20 +126,21 @@ void read_all_headers(char *read_buffer, int start, int stop) {
 
     for (int i = start, j = 0; i < stop; i++) {
         if ((read_buffer[i - 1] == '\r') && (read_buffer[i] == '\n')) {
-            if ((read_buffer[i - 1] == '\n') && (read_buffer[i] == '\r')) {
-                break;
-            }
             memset(v, '\0', sizeof(char) * MAX_BUFFER);
             strcpy(v, buf);
-            log_debug("Header: %s value: %s", k, v);
+            log_debug("Header: %s => %s", k, v);
             memset(buf, '\0', sizeof(char) * MAX_BUFFER);
             key_found = 0, j = 0;
+            if ((read_buffer[i] == '\n') && (read_buffer[i + 1] == '\r')) {
+                break;
+            }
             continue;
         }
         buf[j++] = read_buffer[i];
         if ((buf[j - 1] == ':') && !key_found) {
             memset(k, '\0', sizeof(char) * MAX_BUFFER);
-            strncpy(k, buf, strlen(buf) - 1);
+            strcpy(k, buf);
+            /* strncpy(k, buf, strlen(buf) - 1); */
             key_found = 1, j = 0, i++;
             memset(buf, '\0', sizeof(char) * MAX_BUFFER);
         }
@@ -183,7 +162,7 @@ int handle_client(int connfd) {
 
     if (DEBUG_F) {
         int total_len = strlen(hri.method) + strlen(hri.uri) + strlen(hri.proto);
-        read_all_headers(read_buffer, total_len+4, r);
+        read_all_headers(read_buffer, total_len + 4, r);
     }
 
     log_debug("Request info: method: %s uri: %s proto: %s", hri.method, hri.uri, hri.proto);
