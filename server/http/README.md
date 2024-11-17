@@ -16,7 +16,8 @@ Test
 
 Run the binary
 ```
-bin/server
+export WEBBY_ROOT=/var/www/mywebsite
+bin/webby
 ```
 Use curl to send a GET request
 
