@@ -17,18 +17,13 @@
 #include "utils.h"
 
 /**
- * HTTP responses
- */
-const char *http_status_ok = "HTTP/1.1 200 OK";
-const char *http_status_not_found = "HTTP/1.1 404 NOT FOUND";
-
-/**
  * Example response html
  */
 char example_html_response[] =
     "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
 
 int DEBUG_F = 0;
+char WEBBY_ROOT[MAX_BUFFER];
 
 /*
  * Set the fd as non-blocking but keep the existing options
@@ -62,6 +57,18 @@ void setup_signal_handler() {
         sigaction(SIGINT, &new_action, NULL);
         sigaction(SIGTERM, &new_action, NULL);
     }
+}
+
+/**
+ * Setup the root location of the website
+ */
+void setup_webby_root() {
+    char *wbr = getenv("WEBBY_ROOT");
+    if (wbr == NULL) {
+        fprintf(stderr, "Please set WEBBY_ROOT environment variable\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(WEBBY_ROOT, wbr);
 }
 
 /**
@@ -140,7 +147,6 @@ void read_all_headers(char *read_buffer, int start, int stop) {
         if ((buf[j - 1] == ':') && !key_found) {
             memset(k, '\0', sizeof(char) * MAX_BUFFER);
             strcpy(k, buf);
-            /* strncpy(k, buf, strlen(buf) - 1); */
             key_found = 1, j = 0, i++;
             memset(buf, '\0', sizeof(char) * MAX_BUFFER);
         }
@@ -166,12 +172,25 @@ int handle_client(int connfd) {
     }
 
     log_debug("Request info: method: %s uri: %s proto: %s", hri.method, hri.uri, hri.proto);
-
-    int w = send_response(connfd, http_status_ok, "text/html", example_html_response,
-                          strlen(example_html_response));
-    if (w < 0) {
-        log_error("Error sending response");
-        return 1;
+    if (strcmp(hri.method, "GET") == 0) {
+        // handle get request
+        if (strstr(hri.uri, ".html") != NULL) {
+            int w = send_html_response(connfd, &hri);
+            if (w < 0) {
+                log_error("Error sending html response: %d", w);
+                return 1;
+            }
+        } else {
+            // handle general request with 200 OK
+            char *ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
+            int w = send_response(connfd, ret_http_status, "text/html", example_html_response,
+                                  strlen(example_html_response));
+            free(ret_http_status);
+            if (w < 0) {
+                log_error("Error sending response");
+                return 1;
+            }
+        }
     }
     return 0;
 }
@@ -186,7 +205,6 @@ void usage(char *bin) {
     printf("  -v, --version\t\tprint version number and exit\n");
     printf("  -p, --port <port>\tset the port number (default: 9090)\n");
 }
-
 // Print version
 void version() { printf("%s v%s\n", APP_NAME, APP_VERSION); }
 
@@ -232,6 +250,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    setup_webby_root();
     setup_signal_handler();
 
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);

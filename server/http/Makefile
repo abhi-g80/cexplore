@@ -3,7 +3,6 @@ CC = cc
 
 # Specify the directories
 SRC_DIR = src
-INCLUDE_DIR = include/
 BIN_DIR = bin
 PROGRAM_NAME = webby
 
@@ -15,7 +14,10 @@ HEADER_FILES = $(shell find $(INCLUDE_DIR) -type f -name '*.h')
 BINARY = $(BIN_DIR)/$(PROGRAM_NAME)
 
 # Specify the compiler flags
-CFLAGS = -Wall -O2 -I$(INCLUDE_DIR)
+CFLAGS = -Wall -O2
+
+# Specify debug build compiler flags
+DEBUGCFLAGS = -Wall -g
 
 # Default target
 all: $(BINARY)
@@ -24,6 +26,12 @@ all: $(BINARY)
 $(BINARY): $(SRC_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $^
+
+
+# Compile the program
+debug: $(SRC_FILES)
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(DEBUGCFLAGS) -o $(BINARY) $^
 
 # Clean up
 clean:
