@@ -13,11 +13,13 @@ HEADER_FILES = $(shell find $(INCLUDE_DIR) -type f -name '*.h')
 # Specify the output binary name
 BINARY = $(BIN_DIR)/$(PROGRAM_NAME)
 
+GENFLAGS = -Wall -std=gnu23
+
 # Specify the compiler flags
-CFLAGS = -Wall -O2
+CFLAGS = $(GENFLAGS) -O2
 
 # Specify debug build compiler flags
-DEBUGCFLAGS = -Wall -g
+DEBUGCFLAGS = $(GENFLAGS) -g
 
 # Default target
 all: $(BINARY)
