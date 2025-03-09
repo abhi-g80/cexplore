@@ -15,7 +15,22 @@ char not_found_response[] =
     "<h2>Sorry, the requested resource wasn't found</h2><br>"
     "</body></html>";
 
+/**
+ * Example response html
+ */
+char example_html_response[] =
+    "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
+
 extern char WEBBY_ROOT[MAX_BUFFER];
+
+char *http_content_type_string(enum http_content_type n) {
+    switch (n) {
+        case HttpContentType_TextHtml:
+            return "text/html";
+        default:
+            return "text/plain";
+    }
+}
 
 const char *http_proto_string(enum http_proto n) {
     switch (n) {
@@ -131,7 +146,8 @@ int send_html_response(int fd, struct http_request_info *hri) {
     if (res == NULL) {
         ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
         free(ret_http_status);
-        return send_response(fd, ret_http_status, "text/html", not_found_response,
+        return send_response(fd, ret_http_status,
+                             http_content_type_string(HttpContentType_TextHtml), not_found_response,
                              strlen(not_found_response));
     }
 
@@ -145,6 +161,47 @@ int send_html_response(int fd, struct http_request_info *hri) {
     log_debug("Read from file: %d bytes", b);
 
     int w = send_response(fd, ret_http_status, "text/html", content, file_size);
+    fclose(res);
+    free(ret_http_status);
+    return w;
+}
+
+/**
+ * Send text file (chunked transfer not possible)
+ */
+int send_text_response(int fd, char *content_type, struct http_request_info *hri) {
+    if (strcmp(hri->uri, "/") == 0) {
+        // default
+        char *ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
+        int w = send_response(fd, ret_http_status, "text/html", example_html_response,
+                              strlen(example_html_response));
+        free(ret_http_status);
+        return w;
+    }
+    char *path = strconcat(WEBBY_ROOT, hri->uri);
+    FILE *res = fopen(path, "r");
+    free(path);
+
+    char *ret_http_status = NULL;
+    char content[MAX_RESPONSE_SIZE];
+
+    if (res == NULL) {
+        ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
+        free(ret_http_status);
+        return send_response(fd, ret_http_status, "text/html", not_found_response,
+                             strlen(not_found_response));
+    }
+
+    size_t file_size = get_file_size(res);
+
+    log_debug("file size: %d bytes", file_size);
+
+    ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
+
+    size_t b = fread(content, 1, MAX_RESPONSE_SIZE, res);
+    log_debug("Read from file: %d bytes", b);
+
+    int w = send_response(fd, ret_http_status, content_type, content, file_size);
     fclose(res);
     free(ret_http_status);
     return w;
