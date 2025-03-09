@@ -16,12 +16,6 @@
 #include "response.h"
 #include "utils.h"
 
-/**
- * Example response html
- */
-char example_html_response[] =
-    "<html><h1><center><b>It could be working!</b></center></h1></html>\r\n";
-
 int DEBUG_F = 0;
 char WEBBY_ROOT[MAX_BUFFER];
 
@@ -155,6 +149,7 @@ void read_all_headers(char *read_buffer, int start, int stop) {
 
 int handle_client(int connfd) {
     char read_buffer[MAX_BUFFER] = {0};
+    char content_type[30];
     ssize_t r = read(connfd, read_buffer, MAX_BUFFER);
     if (r < 0) {
         log_error("Error reading from sock");
@@ -175,21 +170,14 @@ int handle_client(int connfd) {
     if (strcmp(hri.method, "GET") == 0) {
         // handle get request
         if (strstr(hri.uri, ".html") != NULL) {
-            int w = send_html_response(connfd, &hri);
-            if (w < 0) {
-                log_error("Error sending html response: %d", w);
-                return 1;
-            }
+            memcpy(content_type, "text/html", strlen("text/html"));
         } else {
-            // handle general request with 200 OK
-            char *ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
-            int w = send_response(connfd, ret_http_status, "text/html", example_html_response,
-                                  strlen(example_html_response));
-            free(ret_http_status);
-            if (w < 0) {
-                log_error("Error sending response");
-                return 1;
-            }
+            memcpy(content_type, "text/plain; charset=utf-8", strlen("text/plain; charset=utf-8"));
+        }
+        int w = send_text_response(connfd, content_type, &hri);
+        if (w < 0) {
+            log_error("Error sending html response: %d", w);
+            return 1;
         }
     }
     return 0;

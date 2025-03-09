@@ -43,5 +43,9 @@ clean:
 format:
 	clang-format -i $(SRC_FILES) $(HEADER_FILES)
 
+# Run docker build
+docker-build:
+	docker build -t $(PROGRAM_NAME)-test .
+
 # Phony targets
-.PHONY: all clean format
+.PHONY: all clean format docker-build
