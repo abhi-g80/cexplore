@@ -14,7 +14,6 @@
 #include "logger.h"
 #include "requests.h"
 #include "response.h"
-#include "utils.h"
 
 int DEBUG_F = 0;
 char WEBBY_ROOT[MAX_BUFFER];
@@ -169,11 +168,13 @@ int handle_client(int connfd) {
     log_debug("Request info: method: %s uri: %s proto: %s", hri.method, hri.uri, hri.proto);
     if (strcmp(hri.method, "GET") == 0) {
         // handle get request
+        memset(content_type, 0, sizeof(content_type));
         if (strstr(hri.uri, ".html") != NULL) {
             memcpy(content_type, "text/html", strlen("text/html"));
         } else {
             memcpy(content_type, "text/plain; charset=utf-8", strlen("text/plain; charset=utf-8"));
         }
+        log_debug("Setting Content-type: %s", content_type);
         int w = send_text_response(connfd, content_type, &hri);
         if (w < 0) {
             log_error("Error sending html response: %d", w);
