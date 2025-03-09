@@ -47,4 +47,6 @@ void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fm
     if (level == ERROR) {
         perror(NULL);
     }
+    fflush(stdout);
+    fflush(stderr);
 }

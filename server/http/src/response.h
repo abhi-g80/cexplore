@@ -7,6 +7,10 @@ int send_response(int, const char *, char *, void *, int);
 
 enum http_method { GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH };
 
+enum http_content_type {
+    HttpContentType_TextHtml = 1,
+};
+
 enum http_proto {
     HttpProtoHTTP_0_9 = 9,
     HttpProtoHTTP_1_0 = 10,
@@ -47,4 +51,5 @@ enum http_status_code {
 char *build_http_status(enum http_proto, enum http_status_code);
 
 int send_html_response(int, struct http_request_info *);
+int send_text_response(int, char*, struct http_request_info *);
 #endif /* RESPONSES_H */
