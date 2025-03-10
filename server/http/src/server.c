@@ -148,7 +148,6 @@ void read_all_headers(char *read_buffer, int start, int stop) {
 
 int handle_client(int connfd) {
     char read_buffer[MAX_BUFFER] = {0};
-    char content_type[30];
     ssize_t r = read(connfd, read_buffer, MAX_BUFFER);
     if (r < 0) {
         log_error("Error reading from sock");
@@ -166,16 +165,14 @@ int handle_client(int connfd) {
     }
 
     log_debug("Request info: method: %s uri: %s proto: %s", hri.method, hri.uri, hri.proto);
+    int w;
     if (strcmp(hri.method, "GET") == 0) {
         // handle get request
-        memset(content_type, 0, sizeof(content_type));
         if (strstr(hri.uri, ".html") != NULL) {
-            memcpy(content_type, "text/html", strlen("text/html"));
+            w = send_html_response(connfd, &hri);
         } else {
-            memcpy(content_type, "text/plain; charset=utf-8", strlen("text/plain; charset=utf-8"));
+            w = send_text_response(connfd, &hri);
         }
-        log_debug("Setting Content-type: %s", content_type);
-        int w = send_text_response(connfd, content_type, &hri);
         if (w < 0) {
             log_error("Error sending html response: %d", w);
             return 1;
