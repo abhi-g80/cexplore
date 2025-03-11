@@ -12,7 +12,8 @@
 char not_found_response[] =
     "<title>Webby - 404</title>"
     "<html><body><h1>404 Not found</h1>"
-    "<h2>Sorry, the requested resource wasn't found</h2><br>"
+    "<h3><i>Sorry, the requested resource wasn't found</h3><hr>"
+    "<p style='font-family:\"Lucida Console\", monospace'>Powered by Webby</p>"
     "</body></html>";
 
 /**
@@ -132,6 +133,27 @@ char *strconcat(const char *s1, const char *s2) {
     return result;
 }
 
+/*
+ * Read a file content from res and send that over fd with content type set to type.
+ * It is assumed that the file exists and hence the HTTP status is set to OK. The check
+ * for file presence is a responsibility of the caller.
+ */
+int send_file_content(int fd, FILE *res, enum http_content_type type) {
+    char content[MAX_RESPONSE_SIZE];
+    size_t file_size = get_file_size(res);
+
+    log_debug("file size: %d bytes", file_size);
+
+    char *ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
+
+    size_t b = fread(content, 1, MAX_RESPONSE_SIZE, res);
+    log_debug("Read from file: %d bytes", b);
+
+    int w = send_response(fd, ret_http_status, http_content_type_string(type), content, file_size);
+    free(ret_http_status);
+    return w;
+}
+
 /**
  * Send html response (chunked transfer not possible)
  */
@@ -145,24 +167,16 @@ int send_html_response(int fd, struct http_request_info *hri) {
 
     if (res == NULL) {
         ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
+        int w =
+            send_response(fd, ret_http_status, http_content_type_string(HttpContentType_TextHtml),
+                          not_found_response, strlen(not_found_response));
+
         free(ret_http_status);
-        return send_response(fd, ret_http_status,
-                             http_content_type_string(HttpContentType_TextHtml), not_found_response,
-                             strlen(not_found_response));
+        return w;
     }
 
-    size_t file_size = get_file_size(res);
-
-    log_debug("file size: %d bytes", file_size);
-
-    ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
-
-    size_t b = fread(content, 1, MAX_RESPONSE_SIZE, res);
-    log_debug("Read from file: %d bytes", b);
-
-    int w = send_response(fd, ret_http_status, "text/html", content, file_size);
+    int w = send_file_content(fd, res, HttpContentType_TextHtml);
     fclose(res);
-    free(ret_http_status);
     return w;
 }
 
@@ -188,24 +202,14 @@ int send_text_response(int fd, struct http_request_info *hri) {
 
     if (res == NULL) {
         ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
+        int w =
+            send_response(fd, ret_http_status, http_content_type_string(HttpContentType_TextHtml),
+                          not_found_response, strlen(not_found_response));
         free(ret_http_status);
-        return send_response(fd, ret_http_status,
-                             http_content_type_string(HttpContentType_TextHtml), not_found_response,
-                             strlen(not_found_response));
+        return w;
     }
 
-    size_t file_size = get_file_size(res);
-
-    log_debug("file size: %d bytes", file_size);
-
-    ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeOk);
-
-    size_t b = fread(content, 1, MAX_RESPONSE_SIZE, res);
-    log_debug("Read from file: %d bytes", b);
-
-    int w = send_response(fd, ret_http_status, http_content_type_string(HttpContentType_TextPlain),
-                          content, file_size);
+    int w = send_file_content(fd, res, HttpContentType_TextPlain);
     fclose(res);
-    free(ret_http_status);
     return w;
 }
