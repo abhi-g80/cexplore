@@ -13,7 +13,7 @@ HEADER_FILES = $(shell find $(INCLUDE_DIR) -type f -name '*.h')
 # Specify the output binary name
 BINARY = $(BIN_DIR)/$(PROGRAM_NAME)
 
-GENFLAGS = -Wall -std=gnu23
+GENFLAGS = -Wall -std=gnu2x
 
 # Specify the compiler flags
 CFLAGS = $(GENFLAGS) -O2
@@ -47,5 +47,9 @@ format:
 docker-build:
 	docker build -t $(PROGRAM_NAME)-test .
 
+# Leak check with Valgrind 
+leak-check: debug
+	valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all bin/webby -d	
+
 # Phony targets
-.PHONY: all clean format docker-build
+.PHONY: all clean format docker-build leak-check

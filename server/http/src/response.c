@@ -163,7 +163,6 @@ int send_html_response(int fd, struct http_request_info *hri) {
     free(path);
 
     char *ret_http_status = NULL;
-    char content[MAX_RESPONSE_SIZE];
 
     if (res == NULL) {
         ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
@@ -198,7 +197,6 @@ int send_text_response(int fd, struct http_request_info *hri) {
     free(path);
 
     char *ret_http_status = NULL;
-    char content[MAX_RESPONSE_SIZE];
 
     if (res == NULL) {
         ret_http_status = build_http_status(HttpProtoHTTP_1_1, HttpStatusCodeNotFound);
