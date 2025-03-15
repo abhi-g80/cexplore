@@ -121,13 +121,19 @@ int setup_socket(int port) {
  */
 void read_all_headers(char *read_buffer, int start, int stop) {
     char buf[MAX_BUFFER];
+
     char k[MAX_BUFFER], v[MAX_BUFFER];
     int key_found = 0;
+
+    memset(buf, 0, sizeof(char) * MAX_BUFFER);
 
     for (int i = start, j = 0; i < stop; i++) {
         if ((read_buffer[i - 1] == '\r') && (read_buffer[i] == '\n')) {
             memset(v, '\0', sizeof(char) * MAX_BUFFER);
-            strcpy(v, buf);
+            if (strlen(buf) > 0)
+                strcpy(v, buf);
+            else
+                continue;  // nothing in buf to copy
             log_debug("Header: %s => %s", k, v);
             memset(buf, '\0', sizeof(char) * MAX_BUFFER);
             key_found = 0, j = 0;
