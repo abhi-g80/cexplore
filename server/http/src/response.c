@@ -122,8 +122,8 @@ int send_response(int fd, const char *http_status, char *content_type, void *bod
     return send(fd, response, response_length + content_length, 0);
 }
 
-<<<<<<< HEAD
-=======
+
+
 size_t get_file_size(FILE *resource) {
     fseek(resource, 0, SEEK_END);
     size_t size = ftell(resource);
@@ -162,7 +162,8 @@ int send_file_content(int fd, FILE *res, enum http_content_type type) {
     return w;
 }
 
->>>>>>> fb79d39 (Move redundant code into its own function)
+
+
 /**
  * Send html response (chunked transfer not possible)
  */

@@ -13,4 +13,8 @@ char *strconcat(const char *, const char *);
 
 void setup_webby_root(char *);
 
+size_t get_file_size(FILE *);
+
+char *strconcat(const char *, const char *);
+
 #endif /* LOG_H */

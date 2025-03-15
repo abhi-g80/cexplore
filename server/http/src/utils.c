@@ -71,4 +71,3 @@ void setup_webby_root(char *w) {
     }
     strcpy(w, wbr);
 }
-
