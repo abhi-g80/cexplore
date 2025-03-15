@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+
 
 /**
  * Returns local server date time
@@ -31,4 +33,27 @@ char *get_server_date() {
 
     strftime(buf, 256, "%a, %d %b %Y %T %Z", ptm);
     return buf;
+}
+
+/**
+ * File size for a FILE resource
+ */
+size_t get_file_size(FILE *resource) {
+    fseek(resource, 0, SEEK_END);
+    size_t size = ftell(resource);
+    fseek(resource, 0, SEEK_SET);
+
+    return size;
+}
+
+/**
+ * Returns string pointing to s1+s2
+ */
+char *strconcat(const char *s1, const char *s2) {
+    char *result = (char *)malloc(strlen(s1) + strlen(s2) + 1);
+
+    strcpy(result, s1);
+    strcat(result, s2);
+
+    return result;
 }

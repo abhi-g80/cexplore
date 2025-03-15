@@ -76,6 +76,12 @@ char *build_http_status(enum http_proto p, enum http_status_code n) {
     return s;
 }
 
+char *add_http_header(char *header, char *key, size_t keylen, char *value, size_t valuelen) {
+    char *h = (char *)malloc(sizeof(char)*(keylen+valuelen));
+    int res_len = sprintf(h, "%s%s: %s\r\n", header, key, value);
+    return h;
+}
+
 /**
  * Send an HTTP response.
  *
@@ -98,23 +104,6 @@ int send_response(int fd, const char *http_status, char *content_type, void *bod
     memcpy(response + response_length, body, content_length);
     free(server_date);
     return send(fd, response, response_length + content_length, 0);
-}
-
-size_t get_file_size(FILE *resource) {
-    fseek(resource, 0, SEEK_END);
-    size_t size = ftell(resource);
-    fseek(resource, 0, SEEK_SET);
-
-    return size;
-}
-
-char *strconcat(const char *s1, const char *s2) {
-    char *result = (char *)malloc(strlen(s1) + strlen(s2) + 1);
-
-    strcpy(result, s1);
-    strcat(result, s2);
-
-    return result;
 }
 
 /**
