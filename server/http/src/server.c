@@ -14,6 +14,7 @@
 #include "logger.h"
 #include "requests.h"
 #include "response.h"
+#include "utils.h"
 
 int DEBUG_F = 0;
 char WEBBY_ROOT[MAX_BUFFER];
@@ -50,18 +51,6 @@ void setup_signal_handler() {
         sigaction(SIGINT, &new_action, NULL);
         sigaction(SIGTERM, &new_action, NULL);
     }
-}
-
-/**
- * Setup the root location of the website
- */
-void setup_webby_root() {
-    char *wbr = getenv("WEBBY_ROOT");
-    if (wbr == NULL) {
-        fprintf(stderr, "Please set WEBBY_ROOT environment variable\n");
-        exit(EXIT_FAILURE);
-    }
-    strcpy(WEBBY_ROOT, wbr);
 }
 
 /**
@@ -242,7 +231,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    setup_webby_root();
+    setup_webby_root(WEBBY_ROOT);
     setup_signal_handler();
 
     log_info("Starting %s v%s", APP_NAME, APP_VERSION);

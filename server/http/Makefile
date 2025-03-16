@@ -2,8 +2,8 @@
 CC = cc
 
 # Specify the directories
-SRC_DIR = src
-BIN_DIR = bin
+SRC_DIR      = src
+BIN_DIR      = bin
 PROGRAM_NAME = webby
 
 # Recursively find all source and header files
