@@ -1,6 +1,8 @@
 #include "utils.h"
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <string.h>
 
@@ -57,3 +59,16 @@ char *strconcat(const char *s1, const char *s2) {
 
     return result;
 }
+
+/**
+ * Setup the root location of the website
+ */
+void setup_webby_root(char *w) {
+    char *wbr = getenv("WEBBY_ROOT");
+    if (wbr == NULL) {
+        fprintf(stderr, "Please set WEBBY_ROOT environment variable\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(w, wbr);
+}
+

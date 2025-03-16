@@ -37,7 +37,7 @@ void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fm
     }
     char fmt_s[MAX_BUFFER];
 
-    sprintf(fmt_s, "%s [%-5s] %s:%d -> %s\n", timenow, level_string, file, lineno, buf);
+    sprintf(fmt_s, "%s [%-5s] %s:%-3d -> %s\n", timenow, level_string, file, lineno, buf);
     free(timenow);
     if (level == DEBUG && DEBUG_F != 1) {
         return;
