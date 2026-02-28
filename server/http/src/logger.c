@@ -16,7 +16,8 @@ extern int DEBUG_F;
  * Will call perror() when logging ERROR message.
  */
 void logger_f(enum LOG_LEVEL level, const char *file, int lineno, const char *fmt, ...) {
-    char *timenow = get_time();
+    // char *timenow = get_time();
+    char *timenow = get_time_mics();
 
     va_list args1;
     va_list args2;

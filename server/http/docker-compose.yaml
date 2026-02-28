@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  webby:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: webby-test:latest
+    container_name: webby
+    ports:
+      - "9091:9091"
+    volumes:
+      - ./tmp2/:/var/www/
+    environment:
+      - WEBBY_ROOT=/var/www
+    command: ["-p", "9091", "-d"]
+    restart: unless-stopped
+

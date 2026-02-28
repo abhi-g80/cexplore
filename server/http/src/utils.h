@@ -2,6 +2,7 @@
 #define UTILS_H
 
 char *get_time();
+char *get_time_mics();
 
 char *get_server_date();
 
